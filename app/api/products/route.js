@@ -13,6 +13,8 @@ export async function POST(request) {
       type: body.type,
       price: body.price,
       description: body.description,
+      longDescription: body.longDescription || null,
+      images: body.images || [],
     }
   })
   return Response.json(item)

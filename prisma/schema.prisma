@@ -14,13 +14,14 @@ datasource db {
 }
 
 model Item {
-  id          Int      @id @default(autoincrement())
-  name        String
-  type        String
-  price       Int
-  description String
-  image       String?
-  createdAt   DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  name            String
+  type            String
+  price           Int
+  description     String
+  longDescription String?
+  images          String[] @default([])
+  createdAt       DateTime @default(now())
 }
 
 model IotData {

@@ -1,12 +1,60 @@
 "use client";
 import { useState, useEffect } from "react";
+import Image from "next/image";
+
+const inputStyle = {
+  background: "var(--bg-tertiary)",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-sm)",
+  padding: "8px 12px",
+  fontSize: "13px",
+  color: "var(--text-primary)",
+  width: "100%",
+  outline: "none",
+  transition: "border-color 0.15s",
+};
 
 export default function AdminPage() {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState({ name: "", type: "product", price: "", description: "" });
+  const [form, setForm] = useState({
+    name: "",
+    type: "product",
+    price: "",
+    description: "",
+    longDescription: "",
+    images: [],
+  });
+
   const [editId, setEditId] = useState(null);
 
-  useEffect(() => { loadItems() }, []);
+  const [imageUrl, setImageUrl] = useState("")
+
+function addImageUrl() {
+  if (!imageUrl.trim()) return
+  setForm({ ...form, images: [...(form.images || []), imageUrl.trim()] })
+  setImageUrl("")
+}
+
+function removeImage(index) {
+  setForm({ ...form, images: form.images.filter((_, i) => i !== index) })
+}
+
+async function handleImageUpload(e) {
+  const files = Array.from(e.target.files)
+  const uploaded = []
+  for (const file of files) {
+    const data = new FormData()
+    data.append("file", file)
+    const res = await fetch("/api/upload", { method: "POST", body: data })
+    const result = await res.json()
+    if (result.url) uploaded.push(result.url)
+  }
+  setForm({ ...form, images: [...(form.images || []), ...uploaded] })
+}
+
+  useEffect(() => {
+    loadItems();
+  }, []);
 
   async function loadItems() {
     const res = await fetch("/api/products");
@@ -34,7 +82,7 @@ export default function AdminPage() {
         body: JSON.stringify(payload),
       });
     }
-    setForm({ name: "", type: "product", price: "", description: "" });
+    setForm({ name: "", type: "product", price: "", description: "", longDescription: "", images: [] });
     loadItems();
   }
 
@@ -46,100 +94,441 @@ export default function AdminPage() {
 
   function handleEdit(item) {
     setEditId(item.id);
-    setForm({ name: item.name, type: item.type, price: item.price, description: item.description });
+    setForm({
+      name: item.name,
+      type: item.type,
+      price: item.price,
+      description: item.description,
+      longDescription: item.longDescription || "",
+      images: item.images || [],
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-4">
-        <h1 className="text-xl font-medium mb-6">Admin — Kelola Produk</h1>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--bg-primary)",
+        padding: "28px 40px",
+      }}
+    >
+      <style>{`
+  .admin-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 640px) { .admin-grid { grid-template-columns: 1fr 1fr; } }
+  input:focus, select:focus { border-color: var(--accent) !important; }
+  input::placeholder { color: var(--text-muted); }
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+`}</style>
 
-        {/* Form */}
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6">
-          <h2 className="text-base font-medium mb-4">
-            {editId ? "Edit Item" : "Tambah Item Baru"}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <input
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full"
-              placeholder="Nama produk/layanan"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <select
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full"
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value })}
-            >
-              <option value="product">Produk</option>
-              <option value="service">Layanan</option>
-            </select>
-            <input
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full"
-              placeholder="Harga (angka)"
-              type="number"
-              value={form.price}
-              onChange={(e) => setForm({ ...form, price: e.target.value })}
-            />
-            <input
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-full"
-              placeholder="Deskripsi"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+      {/* Header */}
+      <div style={{ marginBottom: "24px" }}>
+        <h1
+          style={{
+            fontSize: "18px",
+            fontWeight: 600,
+            color: "var(--text-primary)",
+            marginBottom: "4px",
+          }}
+        >
+          Admin
+        </h1>
+        <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
+          Kelola produk dan layanan
+        </p>
+      </div>
+
+      {/* Form */}
+      <div
+        style={{
+          background: "var(--bg-secondary)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)",
+          padding: "20px",
+          marginBottom: "16px",
+        }}
+      >
+        <p
+          style={{
+            fontSize: "13px",
+            fontWeight: 500,
+            color: "var(--text-primary)",
+            marginBottom: "16px",
+          }}
+        >
+          {editId ? "Edit Item" : "Tambah Item Baru"}
+        </p>
+
+        <div className="admin-grid">
+          <input
+            style={inputStyle}
+            placeholder="Nama produk/layanan"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <select
+            style={{ ...inputStyle, cursor: "pointer" }}
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+          >
+            <option value="product">Produk</option>
+            <option value="service">Layanan</option>
+          </select>
+          <input
+            style={inputStyle}
+            placeholder="Harga (angka)"
+            type="number"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+          />
+          <input
+            style={inputStyle}
+            placeholder="Deskripsi"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
+          {/* Long Description */}
+          <div style={{ gridColumn: "1 / -1" }}>
+            <textarea
+              style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }}
+              placeholder="Deskripsi lengkap produk (opsional)"
+              value={form.longDescription || ""}
+              onChange={(e) =>
+                setForm({ ...form, longDescription: e.target.value })
+              }
             />
           </div>
-          <div className="flex gap-3 mt-4">
-            <button onClick={handleSubmit} className="bg-gray-900 text-white px-5 py-2 rounded-lg text-sm">
-              {editId ? "Simpan Perubahan" : "Tambah"}
-            </button>
-            {editId && (
+
+          {/* Images */}
+          <div style={{ gridColumn: "1 / -1" }}>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--text-muted)",
+                marginBottom: "8px",
+              }}
+            >
+              Gambar produk — paste URL atau upload file
+            </p>
+
+            {/* URL input */}
+            <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+              <input
+                style={{ ...inputStyle, flex: 1 }}
+                placeholder="Paste URL gambar (https://...)"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
               <button
-                onClick={() => { setEditId(null); setForm({ name: "", type: "product", price: "", description: "" }); }}
-                className="border border-gray-200 px-5 py-2 rounded-lg text-sm"
+                onClick={addImageUrl}
+                style={{
+                  background: "var(--bg-tertiary)",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-secondary)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "8px 14px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
               >
-                Batal
+                + URL
               </button>
+            </div>
+
+            {/* Upload file */}
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "var(--bg-tertiary)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)",
+                padding: "7px 14px",
+                fontSize: "12px",
+                color: "var(--text-secondary)",
+                cursor: "pointer",
+                marginBottom: "10px",
+              }}
+            >
+              📁 Upload Gambar
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: "none" }}
+                onChange={handleImageUpload}
+              />
+            </label>
+
+            {/* Preview gambar */}
+            {(form.images || []).length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                  marginTop: "8px",
+                }}
+              >
+                {(form.images || []).map((img, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <Image
+                      src={img}
+                      alt=""
+                      fill
+                      style={{
+                        objectFit: "cover",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--border)",
+                      }}
+                    />
+                    <button
+                      onClick={() => removeImage(i)}
+                      style={{
+                        position: "absolute",
+                        top: "-6px",
+                        right: "-6px",
+                        background: "var(--red)",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: "18px",
+                        height: "18px",
+                        fontSize: "10px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* List produk — card style untuk mobile */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          {items.length === 0 && (
-            <p className="text-center py-8 text-gray-400 text-sm">Belum ada data</p>
+        <div style={{ display: "flex", gap: "8px", marginTop: "14px" }}>
+          <button
+            onClick={handleSubmit}
+            style={{
+              background: "var(--accent-subtle)",
+              color: "var(--accent)",
+              border: "1px solid rgba(74,222,128,0.25)",
+              borderRadius: "var(--radius-sm)",
+              padding: "8px 18px",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {editId ? "Simpan Perubahan" : "Tambah"}
+          </button>
+          {editId && (
+            <button
+              onClick={() => {
+                setEditId(null);
+                setForm({
+                  name: "",
+                  type: "product",
+                  price: "",
+                  description: "",
+                  longDescription: "",
+                  images: [],
+                });
+              }}
+              style={{
+                background: "transparent",
+                color: "var(--text-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)",
+                padding: "8px 18px",
+                fontSize: "13px",
+                cursor: "pointer",
+              }}
+            >
+              Batal
+            </button>
           )}
-          {items.map((item) => (
-            <div key={item.id} className="border-t border-gray-100 p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex-1 min-w-0 mr-2">
-                  <p className="font-medium text-sm">{item.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5 truncate">{item.description}</p>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${item.type === "product" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
+        </div>
+      </div>
+
+      {/* List */}
+      <div
+        style={{
+          background: "var(--bg-secondary)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)",
+          overflow: "hidden",
+        }}
+      >
+        {/* List header */}
+        <div
+          style={{
+            padding: "12px 16px",
+            borderBottom: "1px solid var(--border)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "13px",
+              fontWeight: 500,
+              color: "var(--text-primary)",
+            }}
+          >
+            Daftar Item
+          </p>
+          <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            {items.length} item
+          </span>
+        </div>
+
+        {items.length === 0 && (
+          <p
+            style={{
+              textAlign: "center",
+              padding: "40px",
+              color: "var(--text-muted)",
+              fontSize: "13px",
+            }}
+          >
+            Belum ada data
+          </p>
+        )}
+
+        {items.map((item, index) => (
+          <div
+            key={item.id}
+            style={{
+              padding: "14px 16px",
+              borderTop: index === 0 ? "none" : "1px solid var(--border)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "12px",
+              transition: "background 0.1s",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "var(--bg-hover)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "3px",
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {item.name}
+                </p>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 500,
+                    padding: "2px 7px",
+                    borderRadius: "4px",
+                    background:
+                      item.type === "product"
+                        ? "var(--blue-subtle)"
+                        : "var(--accent-subtle)",
+                    color:
+                      item.type === "product" ? "var(--blue)" : "var(--accent)",
+                    border: `1px solid ${item.type === "product" ? "rgba(96,165,250,0.2)" : "rgba(74,222,128,0.2)"}`,
+                    flexShrink: 0,
+                  }}
+                >
                   {item.type === "product" ? "Produk" : "Layanan"}
                 </span>
               </div>
-              <div className="flex justify-between items-center mt-3">
-                <span className="text-sm font-medium">Rp {item.price.toLocaleString("id-ID")}</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="text-xs border border-gray-200 px-3 py-1.5 rounded-lg"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="text-xs border border-red-200 text-red-600 px-3 py-1.5 rounded-lg"
-                  >
-                    Hapus
-                  </button>
-                </div>
+              <div
+                style={{ display: "flex", gap: "12px", alignItems: "center" }}
+              >
+                <p
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {item.description}
+                </p>
+                <span
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--text-primary)",
+                    flexShrink: 0,
+                  }}
+                >
+                  Rp {item.price.toLocaleString("id-ID")}
+                </span>
               </div>
             </div>
-          ))}
-        </div>
 
+            <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+              <button
+                onClick={() => handleEdit(item)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-secondary)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border-light)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--border)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(248,113,113,0.2)",
+                  color: "var(--red)",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
