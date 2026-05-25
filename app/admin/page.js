@@ -27,30 +27,30 @@ export default function AdminPage() {
 
   const [editId, setEditId] = useState(null);
 
-  const [imageUrl, setImageUrl] = useState("")
+  const [imageUrl, setImageUrl] = useState("");
 
-function addImageUrl() {
-  if (!imageUrl.trim()) return
-  setForm({ ...form, images: [...(form.images || []), imageUrl.trim()] })
-  setImageUrl("")
-}
-
-function removeImage(index) {
-  setForm({ ...form, images: form.images.filter((_, i) => i !== index) })
-}
-
-async function handleImageUpload(e) {
-  const files = Array.from(e.target.files)
-  const uploaded = []
-  for (const file of files) {
-    const data = new FormData()
-    data.append("file", file)
-    const res = await fetch("/api/upload", { method: "POST", body: data })
-    const result = await res.json()
-    if (result.url) uploaded.push(result.url)
+  function addImageUrl() {
+    if (!imageUrl.trim()) return;
+    setForm({ ...form, images: [...(form.images || []), imageUrl.trim()] });
+    setImageUrl("");
   }
-  setForm({ ...form, images: [...(form.images || []), ...uploaded] })
-}
+
+  function removeImage(index) {
+    setForm({ ...form, images: form.images.filter((_, i) => i !== index) });
+  }
+
+  async function handleImageUpload(e) {
+    const files = Array.from(e.target.files);
+    const uploaded = [];
+    for (const file of files) {
+      const data = new FormData();
+      data.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: data });
+      const result = await res.json();
+      if (result.url) uploaded.push(result.url);
+    }
+    setForm({ ...form, images: [...(form.images || []), ...uploaded] });
+  }
 
   useEffect(() => {
     loadItems();
@@ -82,7 +82,14 @@ async function handleImageUpload(e) {
         body: JSON.stringify(payload),
       });
     }
-    setForm({ name: "", type: "product", price: "", description: "", longDescription: "", images: [] });
+    setForm({
+      name: "",
+      type: "product",
+      price: "",
+      description: "",
+      longDescription: "",
+      images: [],
+    });
     loadItems();
   }
 
@@ -275,7 +282,14 @@ async function handleImageUpload(e) {
                 }}
               >
                 {(form.images || []).map((img, i) => (
-                  <div key={i} style={{ position: "relative" }}>
+                  <div
+                    key={i}
+                    style={{
+                      position: "relative",
+                      width: "80px",
+                      height: "80px",
+                    }}
+                  >
                     <Image
                       src={img}
                       alt=""

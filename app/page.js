@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Chatbot from "./components/Chatbot";
 
 async function fetchItems() {
   const res = await fetch("/api/products");
@@ -10,9 +11,18 @@ async function fetchItems() {
 
 export default function CatalogPage() {
   const [items, setItems] = useState([]);
-  const [cart, setCart] = useState([]);
   const [filter, setFilter] = useState("all");
   const router = useRouter();
+
+  const [cart, setCart] = useState(() => {
+    if (typeof window === "undefined") return [];
+    const saved = localStorage.getItem("cart");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
 
   useEffect(() => {
     fetchItems().then((data) => setItems(data));
@@ -130,7 +140,7 @@ export default function CatalogPage() {
                 letterSpacing: "-0.5px",
               }}
             >
-              Smart IoT Store
+              SyRa Store
             </h2>
             <p
               style={{
@@ -141,8 +151,8 @@ export default function CatalogPage() {
                 lineHeight: 1.6,
               }}
             >
-              Solusi perangkat IoT dan layanan instalasi terpercaya. Dari sensor
-              hingga dashboard monitoring.
+              Melayani Pembuatan dan Pembelian Perangkat Iot, Dasboard IoT,
+              Sensor, Microcontroller, 3D Modelling.
             </p>
             <button
               onClick={() =>
@@ -705,6 +715,10 @@ export default function CatalogPage() {
               </div>
             )}
           </div>
+        </div>
+        {/* Chatbot */}
+        <div className="cart-sidebar" style={{ width: "100%" }}>
+          <Chatbot />
         </div>
       </div>
     </div>

@@ -33,3 +33,4 @@ export async function DELETE(request, { params }) {
   })
   return Response.json({ success: true })
 }
+

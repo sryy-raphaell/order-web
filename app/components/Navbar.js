@@ -7,7 +7,7 @@ export default function Navbar() {
 
   const links = [
     { href: '/', label: 'Katalog' },
-    { href: '/dashboard', label: 'IoT Dashboard' },
+    { href: '/dashboard', label: 'Dashboard' },
     { href: '/admin', label: 'Admin' },
   ]
 
@@ -32,9 +32,9 @@ export default function Navbar() {
           borderRadius: '4px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '10px', fontWeight: 700, color: '#000'
-        }}>S</div>
+        }}>SR</div>
         <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
-          Smart IoT Store
+          SyRa Store
         </span>
       </div>
 

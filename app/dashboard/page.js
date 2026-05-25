@@ -69,7 +69,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div style={{ marginBottom: "24px" }}>
         <h1 style={{ fontSize: "18px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "4px" }}>
-          IoT Dashboard
+          Dashboard
         </h1>
         <p style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
           Monitoring perangkat realtime
