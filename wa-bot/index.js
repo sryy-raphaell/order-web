@@ -27,30 +27,22 @@ async function getOrderStatus(lid) {
 
 async function linkToken(token, lid) {
   try {
+    const res = await fetch(`${API_URL}/api/link-token`, {
+      method: "POST",
 
-    const res = await fetch(
-      `${API_URL}/api/link-token`,
-      {
-        method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
 
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-
-        body: JSON.stringify({
-          token,
-          lid,
-        }),
-      }
-    );
+      body: JSON.stringify({
+        token,
+        lid,
+      }),
+    });
 
     return await res.json();
-
   } catch {
-
     return null;
-
   }
 }
 
@@ -74,8 +66,6 @@ async function linkLid(phone, lid) {
     return null;
   }
 }
-
-
 
 // =========================
 // Start Bot
@@ -186,7 +176,23 @@ Ada yang bisa dibantu?`;
       // =========================
       // VERIFY
       // =========================
-      else if (text.startsWith("!verify ")) {
+      else if (text.startsWith("!link ")) {
+        const token = text.replace("!link ", "").trim().toUpperCase();
+
+        const result = await linkToken(token, lid);
+
+        if (result?.success) {
+          reply = `✅ WhatsApp berhasil terhubung!
+
+Halo ${result.name} 👋
+
+Sekarang kamu bisa memakai:
+- !status
+- !histori`;
+        } else {
+          reply = "❌ Token tidak valid atau sudah digunakan.";
+        }
+      } else if (text.startsWith("!verify ")) {
         const inputPhone = text.replace("!verify ", "").trim();
 
         const result = await linkLid(inputPhone, lid);
