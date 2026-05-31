@@ -43,3 +43,24 @@ next-env.d.ts
 /app/generated/prisma
 
 /lib/generated/prisma
+
+wa-bot/auth_info/
+
+wa-bot/auth_info/
+wa-bot/node_modules/
+smart-order/node_modules/
+smart-order/.next/
+
+# Node modules
+smart-order/node_modules/
+wa-bot/node_modules/
+
+# Next.js
+smart-order/.next/
+
+# WhatsApp session
+wa-bot/auth_info/
+
+# Env
+*.env
+.env*
