@@ -18,22 +18,17 @@ export default function CheckoutPage() {
       return;
     }
 
-    // normalize nomor
     const cleanPhone = form.phone.replace(/\D/g, "").replace(/^0/, "62");
 
-    // warning nomor berbeda
     const confirmOrder = confirm(
       `Nomor WhatsApp yang digunakan:\n${cleanPhone}\n\nPastikan nomor ini sama dengan nomor WhatsApp yang akan digunakan untuk chat bot.\n\nJika berbeda, kamu harus melakukan verifikasi manual dengan perintah !verify`,
     );
 
     if (!confirmOrder) return;
 
-    // simpan order
     await fetch("/api/orders", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: form.name,
         phone: cleanPhone,
@@ -61,117 +56,276 @@ export default function CheckoutPage() {
     ].join("\n");
 
     const encoded = encodeURIComponent(message);
-
     const waNumber = "6285178336732";
 
-    // kosongkan cart setelah checkout
     localStorage.removeItem("cart");
-
     window.open(`https://wa.me/${waNumber}?text=${encoded}`);
   }
 
   const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            onClick={() => router.push("/")}
-            className="text-sm border border-gray-200 px-3 py-2 rounded-lg bg-cyan-50 text-cyan-700 hover:bg-cyan-100 transition-colors"
-          >
-            ← Kembali
-          </button>
-          <h1 className="text-xl font-medium">Checkout</h1>
-        </div>
+    <div style={{ minHeight: "100vh", background: "var(--bg-primary)", padding: "28px 40px" }}>
+      <style>{`
+        .checkout-input {
+          width: 100%;
+          background: var(--bg-tertiary);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-sm);
+          padding: 9px 12px;
+          font-size: 13px;
+          color: var(--text-primary);
+          outline: none;
+          transition: border-color 0.15s;
+          box-sizing: border-box;
+          font-family: inherit;
+        }
+        .checkout-input:focus { border-color: var(--accent); }
+        .checkout-input::placeholder { color: var(--text-muted); }
 
-        <div className="flex gap-6">
-          {/* Form */}
-          <div className="flex-1 bg-white border border-gray-200 rounded-xl p-6">
-            <h2 className="font-medium mb-4">Data Pemesan</h2>
-            <div className="flex flex-col gap-4">
+        .checkout-layout {
+          display: flex;
+          gap: 20px;
+          flex-direction: column;
+        }
+        @media (min-width: 768px) {
+          .checkout-layout { flex-direction: row; }
+          .checkout-summary { width: 288px; flex-shrink: 0; }
+        }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "24px" }}>
+        <button
+          onClick={() => router.push("/")}
+          style={{
+            background: "transparent",
+            border: "1px solid var(--border)",
+            color: "var(--text-secondary)",
+            borderRadius: "var(--radius-sm)",
+            padding: "6px 14px",
+            fontSize: "13px",
+            cursor: "pointer",
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = "var(--border-light)";
+            e.currentTarget.style.color = "var(--text-primary)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.color = "var(--text-secondary)";
+          }}
+        >
+          ← Kembali
+        </button>
+        <div>
+          <h1 style={{ fontSize: "18px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>
+            Checkout
+          </h1>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+            Isi data pemesan untuk melanjutkan
+          </p>
+        </div>
+      </div>
+
+      <div className="checkout-layout">
+        {/* Form */}
+        <div style={{ flex: 1 }}>
+          <div style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)",
+            padding: "20px",
+          }}>
+            <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", marginBottom: "18px" }}>
+              Data Pemesan
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* Nama */}
               <div>
-                <label className="text-sm text-gray-500 mb-1 block">
+                <label style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
                   Nama Lengkap
                 </label>
                 <input
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="checkout-input"
                   placeholder="Masukkan nama lengkap"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </div>
+
+              {/* No WA */}
               <div>
-                <label className="text-sm text-gray-500 mb-1 block">
+                <label style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
                   No WhatsApp
                 </label>
                 <input
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="checkout-input"
                   placeholder="Contoh: 08123456789"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
-                <p className="text-xs text-amber-600 mt-1">
-                  Gunakan nomor WhatsApp yang sama dengan nomor yang dipakai
-                  untuk chat bot agar fitur status order bekerja otomatis.
+                <p style={{
+                  fontSize: "11px",
+                  color: "#f59e0b",
+                  marginTop: "6px",
+                  lineHeight: 1.5,
+                }}>
+                  ⚠ Gunakan nomor WhatsApp yang sama dengan nomor yang dipakai untuk chat bot agar fitur status order bekerja otomatis.
                 </p>
               </div>
+
+              {/* Alamat */}
               <div>
-                <label className="text-sm text-gray-500 mb-1 block">
+                <label style={{ fontSize: "12px", color: "var(--text-muted)", display: "block", marginBottom: "6px" }}>
                   Alamat Lengkap
                 </label>
                 <textarea
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                  className="checkout-input"
                   placeholder="Masukkan alamat lengkap"
                   rows={3}
                   value={form.address}
-                  onChange={(e) =>
-                    setForm({ ...form, address: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  style={{ resize: "vertical", minHeight: "80px" }}
                 />
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Order Summary */}
-          <div className="w-72">
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h2 className="font-medium mb-4">Ringkasan Order</h2>
-              {cart.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">
-                  Keranjang kosong
-                </p>
-              )}
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex justify-between py-2 border-b border-gray-100"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-gray-500">x{item.qty}</p>
-                  </div>
-                  <p className="text-sm">
-                    Rp {(item.price * item.qty).toLocaleString("id-ID")}
-                  </p>
-                </div>
-              ))}
+        {/* Order Summary */}
+        <div className="checkout-summary">
+          <div style={{
+            background: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)",
+            padding: "16px",
+            position: "sticky",
+            top: "16px",
+          }}>
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "14px",
+            }}>
+              <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)" }}>
+                Ringkasan Order
+              </p>
               {cart.length > 0 && (
-                <>
-                  <div className="flex justify-between text-sm font-medium mt-4 mb-6">
-                    <span>Total</span>
-                    <span>Rp {total.toLocaleString("id-ID")}</span>
-                  </div>
-                  <button
-                    onClick={handleSubmit}
-                    className="w-full bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium"
-                  >
-                    Kirim ke WhatsApp
-                  </button>
-                </>
+                <span style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  padding: "2px 8px",
+                  borderRadius: "20px",
+                  background: "var(--accent-subtle)",
+                  color: "var(--accent)",
+                  border: "1px solid rgba(74,222,128,0.2)",
+                }}>
+                  {cart.reduce((s, c) => s + c.qty, 0)} item
+                </span>
               )}
             </div>
+
+            {cart.length === 0 ? (
+              <p style={{
+                fontSize: "12px",
+                color: "var(--text-muted)",
+                textAlign: "center",
+                padding: "24px 0",
+              }}>
+                Keranjang kosong
+              </p>
+            ) : (
+              <>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {cart.map((item, index) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        padding: "10px 0",
+                        borderBottom: index < cart.length - 1 ? "1px solid var(--border)" : "none",
+                        gap: "8px",
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          color: "var(--text-primary)",
+                          marginBottom: "2px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}>
+                          {item.name}
+                        </p>
+                        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                          x{item.qty}
+                        </p>
+                      </div>
+                      <p style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", flexShrink: 0 }}>
+                        Rp {(item.price * item.qty).toLocaleString("id-ID")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: "14px",
+                  paddingTop: "14px",
+                  borderTop: "1px solid var(--border)",
+                  marginBottom: "14px",
+                }}>
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>
+                    Total
+                  </span>
+                  <span style={{ fontSize: "14px", fontWeight: 700, color: "var(--accent)" }}>
+                    Rp {total.toLocaleString("id-ID")}
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleSubmit}
+                  style={{
+                    width: "100%",
+                    background: "var(--accent-subtle)",
+                    color: "var(--accent)",
+                    border: "1px solid rgba(74,222,128,0.25)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "10px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--accent)";
+                    e.currentTarget.style.color = "#000";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "var(--accent-subtle)";
+                    e.currentTarget.style.color = "var(--accent)";
+                  }}
+                >
+                  <span>💬</span>
+                  Kirim ke WhatsApp
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
