@@ -1,4 +1,4 @@
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 
 function generateToken() {
   return "SRY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
