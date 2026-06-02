@@ -1,4 +1,4 @@
-import { prisma } from "../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 
 function generateToken() {
   return "SRY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -54,12 +54,12 @@ export async function POST(request) {
   // Pesan WA yang dikirim ke user
   const waMessage = `Halo ${name}! 👋
 
-Terima kasih sudah memesan di *SyRa Store* 
+Terima kasih sudah memesan di *SyRa Store* 🎉
 
-*Order #${order.id}* berhasil dibuat
-Total: Rp ${total.toLocaleString("id-ID")}
+📦 *Order #${order.id}* berhasil dibuat
+💰 Total: Rp ${total.toLocaleString("id-ID")}
 
-*Token akun kamu:*
+🔑 *Token akun kamu:*
 ${token}
 
 Balas pesan ini dengan perintah:
