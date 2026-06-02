@@ -8,7 +8,7 @@ export default function Navbar() {
   const links = [
     { href: '/', label: 'Katalog' },
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/admin', label: 'Admin' },
+    // { href: '/admin', label: 'Admin' },
   ]
 
   return (
