@@ -36,18 +36,14 @@ export async function POST(request) {
 
     // Merge virtual pins
     if (pins && typeof pins === "object") {
-      const existing = await prisma.iotData.findUnique({ where: { deviceName } });
+      const existing = await prisma.iotData.findUnique({
+        where: { deviceName },
+      });
       const currentPins = existing?.pins ?? {};
       updateData.pins = { ...currentPins, ...pins };
     }
 
     // Merge relays
-    if (relays && typeof relays === "object") {
-      const existing = await prisma.iotData.findUnique({ where: { deviceName } });
-      const currentRelays = existing?.relays ?? {};
-      updateData.relays = { ...currentRelays, ...relays };
-      if (relays["0"] !== undefined) updateData.relay = relays["0"];
-    }
 
     const device = await prisma.iotData.upsert({
       where: { deviceName },
@@ -59,16 +55,21 @@ export async function POST(request) {
         humidity: humidity ?? 0,
         status: "online",
         pins: pins ?? {},
-        relays: relays ?? {},
+        relays: {},
         relay: false,
       },
     });
 
+    const latest = await prisma.iotData.findUnique({
+      where: { deviceName },
+    });
+
     return Response.json({
       success: true,
-      relay: device.relay,
-      relays: device.relays,
+      relay: latest?.relay ?? false,
+      relays: latest?.relays ?? {},
     });
+    
   } catch (err) {
     console.error("IoT update error:", err);
     return Response.json({ error: err.message }, { status: 500 });
