@@ -2,7 +2,7 @@ import "./globals.css";
 import Navbar from "./components/Navbar";
 
 export const metadata = {
-  title: "Smart IoT Store",
+  title: "SyRa Store - SRYY Team Katalog",
   description: "Katalog produk dan layanan IoT",
 };
 

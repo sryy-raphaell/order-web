@@ -8,16 +8,13 @@ const {
 const qrcode = require("qrcode-terminal");
 const http = require("http");
 
-// URL API Next.js
-const API_URL = "http://localhost:3001";
+const API_URL = "http://localhost:3000";
 const BOT_PORT = 3002;
-
-// Simpan referensi socket global supaya HTTP server bisa akses
+  
 let sockGlobal = null;
 
-// =========================
-// Ambil data order user
-// =========================
+// ─── API helpers ─────────────────────────────────────────────────────────────
+
 async function getOrderStatus(lid) {
   try {
     const res = await fetch(`${API_URL}/api/orders?lid=${encodeURIComponent(lid)}`);
@@ -25,6 +22,16 @@ async function getOrderStatus(lid) {
     return await res.json();
   } catch (err) {
     console.log("getOrderStatus error:", err.message);
+    return null;
+  }
+}
+
+async function getOrdersByPhone(phone) {
+  try {
+    const res = await fetch(`${API_URL}/api/orders?phone=${encodeURIComponent(phone)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
     return null;
   }
 }
@@ -57,46 +64,81 @@ async function linkLid(phone, lid) {
   }
 }
 
-// =========================
-// HTTP server internal
-// Dipakai oleh Next.js untuk suruh bot kirim pesan
-// =========================
+async function getOrder(orderId) {
+  try {
+    const res = await fetch(`${API_URL}/api/orders/${orderId}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+async function submitOffer(orderId, amount, message) {
+  try {
+    const res = await fetch(`${API_URL}/api/orders/${orderId}/offer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from: "user", amount, message }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.log("submitOffer error:", err.message);
+    return null;
+  }
+}
+
+async function acceptLatestAdminOffer(orderId) {
+  try {
+    const order = await getOrder(orderId);
+    if (!order) return null;
+    const offers = Array.isArray(order.priceOffers) ? order.priceOffers : [];
+    const adminOffer = [...offers].reverse().find(
+      (o) => o.from === "admin" && o.status === "pending"
+    );
+    if (!adminOffer) return { error: "Tidak ada penawaran admin yang bisa diterima" };
+    const res = await fetch(`${API_URL}/api/orders/${orderId}/offer`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offerId: adminOffer.id, action: "accept" }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.log("acceptOffer error:", err.message);
+    return null;
+  }
+}
+
+// ─── HTTP server ──────────────────────────────────────────────────────────────
+
 function startHttpServer() {
   const server = http.createServer(async (req, res) => {
-    // Health check
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ status: "ok", connected: !!sockGlobal }));
       return;
     }
 
-    // Send message endpoint
     if (req.method === "POST" && req.url === "/send-message") {
       let body = "";
       req.on("data", (chunk) => (body += chunk));
       req.on("end", async () => {
         try {
           const { phone, message } = JSON.parse(body);
-
           if (!phone || !message) {
             res.writeHead(400, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "phone and message required" }));
             return;
           }
-
           if (!sockGlobal) {
             res.writeHead(503, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Bot not connected yet" }));
             return;
           }
-
-          // Normalisasi phone → JID
           const cleanPhone = phone.replace(/\D/g, "").replace(/^0/, "62");
           const jid = `${cleanPhone}@s.whatsapp.net`;
-
           await sockGlobal.sendMessage(jid, { text: message });
-
-          console.log(`📤 Pesan terkirim ke ${cleanPhone}`);
+          console.log(`Pesan terkirim ke ${cleanPhone}`);
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ success: true }));
         } catch (err) {
@@ -113,291 +155,220 @@ function startHttpServer() {
   });
 
   server.listen(BOT_PORT, () => {
-    console.log(`🌐 Bot HTTP API aktif di port ${BOT_PORT}`);
+    console.log(`Bot HTTP API aktif di port ${BOT_PORT}`);
   });
 }
 
-// =========================
-// Start Bot
-// =========================
+// ─── Bot ──────────────────────────────────────────────────────────────────────
+
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState("auth_info");
-
-  const sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: true,
-  });
-
-  // Simpan referensi global
+  const sock = makeWASocket({ auth: state, printQRInTerminal: true });
   sockGlobal = sock;
-
-  // =========================
-  // Save session
-  // =========================
   sock.ev.on("creds.update", saveCreds);
 
-  // =========================
-  // Connection update
-  // =========================
   sock.ev.on("connection.update", ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      qrcode.generate(qr, { small: true });
-    }
-
+    if (qr) qrcode.generate(qr, { small: true });
     if (connection === "close") {
       sockGlobal = null;
       const shouldReconnect =
-        lastDisconnect?.error?.output?.statusCode !==
-        DisconnectReason.loggedOut;
-
-      console.log("WA Closed. Reconnect:", shouldReconnect);
-
-      if (shouldReconnect) {
-        startBot();
-      }
+        lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      if (shouldReconnect) startBot();
     }
-
-    if (connection === "open") {
-      console.log("Bot WA aktif!");
-      sockGlobal = sock;
-    }
+    if (connection === "open") { console.log("Bot WA aktif!"); sockGlobal = sock; }
   });
 
-  // =========================
-  // Message handler
-  // =========================
   sock.ev.on("messages.upsert", async ({ messages }) => {
     try {
       const msg = messages[0];
-
       if (!msg.message || msg.key.fromMe) return;
 
-      // =========================
-      // JID & identitas
-      // =========================
       const from = msg.key.remoteJid || "";
       const jid = msg.key.participant || msg.key.remoteJid || "";
-
-      console.log("RAW JID:", jid);
-
       const normalized = jidNormalizedUser(jid);
-      console.log("NORMALIZED:", normalized);
-
-      // LID
       const lid = normalized.split("@")[0].split(":")[0];
-      console.log("LID:", lid);
+      const phoneFromJid = (msg.key.remoteJid || "").split("@")[0].replace(/\D/g, "");
 
-      // Phone dari remoteJid (lebih reliable untuk nomor asli)
-      const remoteJid = msg.key.remoteJid || "";
-      const phoneFromJid = remoteJid.split("@")[0].replace(/\D/g, "");
-      console.log("PHONE FROM JID:", phoneFromJid);
+      console.log("LID:", lid, "| PHONE:", phoneFromJid);
 
-      // =========================
-      // Text
-      // =========================
       const text = (
         msg.message.conversation ||
         msg.message.extendedTextMessage?.text ||
         ""
-      )
-        .trim()
-        .replace(/\s+/g, " ");
-
+      ).trim().replace(/\s+/g, " ");
       const textLower = text.toLowerCase();
-      console.log("TEXT:", text);
 
       let reply = "";
 
-      // =========================
-      // Menu
-      // =========================
-      if (["halo", "hi", "hello", "mulai"].includes(textLower)) {
-        reply = `Halo! 👋 Selamat datang di *SyRa Store*
-
-Saya bisa membantu kamu dengan:
-• Ketik *!status* — cek order terakhir
-• Ketik *!histori* — semua riwayat order
-• Ketik *!produk* — lihat katalog
-
-Belum terhubung? Ketik *!link TOKEN* setelah order, atau *!verify NOMORHP* untuk verifikasi manual.`;
+      async function resolveUser() {
+        let data = await getOrderStatus(lid);
+        if (!data || data.error) data = await getOrdersByPhone(phoneFromJid);
+        return data;
       }
 
-      // =========================
-      // LINK via token (dikirim otomatis saat order)
-      // =========================
+      if (["halo", "hi", "hello", "mulai"].includes(textLower)) {
+        reply = `Halo! Selamat datang di *SyRa Store* 
+
+Perintah yang tersedia:
+- *!status* - order terakhir
+- *!histori* - semua riwayat order
+- *!produk* - lihat katalog
+- *!tawar [id] [harga] [pesan]* - tawar harga
+- *!terima [id]* - terima penawaran admin
+
+Belum terhubung? Ketik *!link TOKEN* atau *!verify NOMORHP*`;
+      }
+
       else if (textLower.startsWith("!link ")) {
         const token = text.replace(/!link /i, "").trim().toUpperCase();
-        console.log("LINK TOKEN:", token, "LID:", lid);
-
         const result = await linkToken(token, lid);
-
         if (result?.success) {
-          reply = `WhatsApp berhasil terhubung, ${result.name}! 🎉
-
-Sekarang kamu bisa menggunakan:
-• *!status* — cek order terakhir
-• *!histori* — riwayat semua order`;
+          reply = `Berhasil terhubung, ${result.name}!\n\n- *!status* - cek order terakhir\n- *!histori* - riwayat order`;
         } else {
-          reply = `Token tidak valid atau sudah digunakan.
-
-Pastikan token yang kamu masukkan benar. Token tampil di halaman konfirmasi setelah order.
-
-Ketik *!verify NOMORHP* jika kamu tidak punya token.`;
+          reply = `Token tidak valid atau sudah digunakan.\n\nToken ada di halaman konfirmasi saat order. Ketik *!verify NOMORHP* jika tidak punya token.`;
         }
       }
 
-      // =========================
-      // VERIFY via phone (fallback manual)
-      // =========================
       else if (textLower.startsWith("!verify ")) {
         const inputPhone = text.replace(/!verify /i, "").trim();
-        console.log("VERIFY PHONE:", inputPhone, "LID:", lid);
-
         const result = await linkLid(inputPhone, lid);
-        console.log("VERIFY RESULT:", JSON.stringify(result));
-
         if (result?.success) {
-          reply = `✅ Nomor *${inputPhone}* berhasil diverifikasi!
-
-Sekarang kamu bisa menggunakan:
-• *!status* — cek order terakhir
-• *!histori* — riwayat semua order`;
+          reply = `Nomor *${inputPhone}* berhasil diverifikasi!\n\n- *!status* - cek order\n- *!histori* - riwayat`;
         } else {
-          reply = `❌ Nomor *${inputPhone}* tidak ditemukan di database order.
-
-Pastikan format nomor benar:
-• Contoh: *!verify 08123456789*
-• Atau: *!verify 628123456789*
-
-Hubungi admin jika masalah berlanjut.`;
+          reply = `Nomor *${inputPhone}* tidak ditemukan.\nFormat: *!verify 08123456789*`;
         }
       }
 
-      // =========================
-      // STATUS
-      // =========================
       else if (textLower === "!status" || textLower === "status") {
-        let data = await getOrderStatus(lid);
-        console.log("STATUS by LID result:", JSON.stringify(data));
-
-        // Fallback: coba cari by phone jika LID tidak ketemu
-        if ((!data || data.error) && phoneFromJid) {
-          console.log("Fallback to phone:", phoneFromJid);
-          try {
-            const res = await fetch(
-              `${API_URL}/api/orders?phone=${phoneFromJid}`
-            );
-            if (res.ok) data = await res.json();
-          } catch {}
-          console.log("STATUS by phone result:", JSON.stringify(data));
-        }
-
+        const data = await resolveUser();
         if (!data || data.error || !data.orders?.length) {
-          reply = `Kamu belum memiliki order atau akun belum terhubung. 🛒
-
-Untuk menghubungkan akun, ketik:
-*!link TOKEN* (token ada di halaman konfirmasi order)
-atau
-*!verify NOMORHP*`;
+          reply = `Belum ada order atau akun belum terhubung.\nKetik *!link TOKEN* atau *!verify NOMORHP*.`;
         } else {
           const last = data.orders[0];
-          const items = last.items.map((i) => `• ${i.name} x${i.qty}`).join("\n");
-
+          const items = last.items.map((i) => `- ${i.name} x${i.qty}`).join("\n");
+          const finalPrice = last.negotiatedPrice ?? last.total;
+          const hasService = last.items.some((i) => i.type === "service");
           const statusMap = {
-            pending: "⏳ Pending konfirmasi",
-            pembayaran: "💳 Menunggu pembayaran",
-            pembuatan: "🔧 Sedang dibuat",
-            pengiriman: "🚚 Dalam pengiriman",
-            selesai: "✅ Selesai",
+            pending: "Menunggu konfirmasi",
+            negosiasi: "Sedang negosiasi harga",
+            pembayaran: "Menunggu pembayaran",
+            pembuatan: "Sedang dibuat",
+            pengiriman: "Dalam pengiriman",
+            selesai: "Selesai",
+            dibatalkan: "Dibatalkan",
           };
-          const statusText = statusMap[last.status] || `📋 ${last.status}`;
 
-          reply = `📦 *Order Terakhir — ${data.name}*
+          reply = `*Order Terakhir - ${data.name}*\n\n${items}\n\nTotal: Rp ${finalPrice.toLocaleString("id-ID")}`;
+          if (last.negotiatedPrice && last.negotiatedPrice !== last.total) {
+            reply += ` (dinegosiasi dari Rp ${last.total.toLocaleString("id-ID")})`;
+          }
+          reply += `\nStatus: *${statusMap[last.status] || last.status}*`;
+          reply += `\nTanggal: ${new Date(last.createdAt).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`;
 
-${items}
+          if (last.status === "pembayaran" && hasService) {
+            reply += `\n\n*DP yang harus dibayar: Rp ${Math.ceil(finalPrice / 2).toLocaleString("id-ID")}* (50%)`;
+          }
 
-💰 Total: Rp ${last.total.toLocaleString("id-ID")}
-${statusText}
-🕐 ${new Date(last.createdAt).toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}`;
+          const offers = Array.isArray(last.priceOffers) ? last.priceOffers : [];
+          const pendingAdminOffer = [...offers].reverse().find(
+            (o) => o.from === "admin" && o.status === "pending"
+          );
+          if (pendingAdminOffer) {
+            reply += `\n\n*Ada penawaran dari admin:*\nRp ${pendingAdminOffer.amount.toLocaleString("id-ID")}`;
+            if (pendingAdminOffer.message) reply += `\n"${pendingAdminOffer.message}"`;
+            reply += `\n\nBalas *!terima ${last.id}* untuk menerima\natau *!tawar ${last.id} [harga]* untuk counter.`;
+          }
         }
       }
 
-      // =========================
-      // HISTORI
-      // =========================
       else if (textLower === "!histori" || textLower === "histori") {
-        let data = await getOrderStatus(lid);
-
-        // Fallback phone
-        if ((!data || data.error) && phoneFromJid) {
-          try {
-            const res = await fetch(
-              `${API_URL}/api/orders?phone=${phoneFromJid}`
-            );
-            if (res.ok) data = await res.json();
-          } catch {}
-        }
-
-        console.log("HISTORY RESULT:", JSON.stringify(data));
-
+        const data = await resolveUser();
         if (!data || data.error || !data.orders?.length) {
-          reply = "Belum ada riwayat order, atau akun belum terhubung.\n\nKetik *!link TOKEN* atau *!verify NOMORHP* untuk menghubungkan akun.";
+          reply = "Belum ada riwayat order.\nKetik *!link TOKEN* atau *!verify NOMORHP*.";
         } else {
-          const statusEmoji = {
-            pending: "⏳",
-            pembayaran: "💳",
-            pembuatan: "🔧",
-            pengiriman: "🚚",
-            selesai: "✅",
-          };
-
-          const list = data.orders
-            .map((o, i) => {
-              const emoji = statusEmoji[o.status] || "📋";
-              return `${i + 1}. ${new Date(o.createdAt).toLocaleDateString("id-ID")} — Rp ${o.total.toLocaleString("id-ID")} ${emoji} ${o.status}`;
-            })
-            .join("\n");
-
-          reply = `📋 *Riwayat Order — ${data.name}*\n\n${list}`;
+          const statusEmoji = { pending: "⏳", negosiasi: "🤝", pembayaran: "💳", pembuatan: "🔧", pengiriman: "🚚", selesai: "✅", dibatalkan: "❌" };
+          const list = data.orders.map((o, i) => {
+            const price = (o.negotiatedPrice ?? o.total).toLocaleString("id-ID");
+            return `${i + 1}. #${o.id} | ${new Date(o.createdAt).toLocaleDateString("id-ID")} | Rp ${price} ${statusEmoji[o.status] || ""} ${o.status}`;
+          }).join("\n");
+          reply = `*Riwayat Order - ${data.name}*\n\n${list}`;
         }
       }
 
-      // =========================
-      // PRODUK
-      // =========================
+      else if (textLower.startsWith("!tawar ")) {
+        const parts = text.replace(/!tawar /i, "").trim().split(" ");
+        const orderId = parseInt(parts[0]);
+        const amount = parseInt(parts[1]?.replace(/\./g, "").replace(/,/g, ""));
+        const message = parts.slice(2).join(" ");
+
+        if (isNaN(orderId) || isNaN(amount) || amount <= 0) {
+          reply = `Format tidak valid.\nContoh: *!tawar 5 150000 bisa kurang gak?*`;
+        } else {
+          const userData = await resolveUser();
+          if (!userData || !userData.orders?.length) {
+            reply = "Akun belum terhubung. Ketik *!link TOKEN* atau *!verify NOMORHP*.";
+          } else {
+            const ownOrder = userData.orders.find((o) => o.id === orderId);
+            if (!ownOrder) {
+              reply = `Order #${orderId} tidak ditemukan.\nKetik *!histori* untuk lihat daftar order kamu.`;
+            } else if (!["pending", "negosiasi"].includes(ownOrder.status)) {
+              reply = `Order #${orderId} tidak bisa dinegosiasi lagi (status: ${ownOrder.status}).`;
+            } else {
+              const result = await submitOffer(orderId, amount, message);
+              if (result && !result.error) {
+                reply = `Penawaran terkirim!\n\nOrder #${orderId}\nHarga tawar: *Rp ${amount.toLocaleString("id-ID")}*${message ? `\nPesan: "${message}"` : ""}\n\nAdmin akan merespons segera.`;
+              } else {
+                reply = `Gagal mengirim penawaran: ${result?.error || "coba lagi"}.`;
+              }
+            }
+          }
+        }
+      }
+
+      else if (textLower.startsWith("!terima ")) {
+        const orderId = parseInt(text.replace(/!terima /i, "").trim());
+        if (isNaN(orderId)) {
+          reply = `Format tidak valid.\nContoh: *!terima 5*`;
+        } else {
+          const userData = await resolveUser();
+          if (!userData || !userData.orders?.length) {
+            reply = "Akun belum terhubung. Ketik *!link TOKEN*.";
+          } else {
+            const ownOrder = userData.orders.find((o) => o.id === orderId);
+            if (!ownOrder) {
+              reply = `Order #${orderId} tidak ditemukan di akunmu.`;
+            } else {
+              const result = await acceptLatestAdminOffer(orderId);
+              if (result && !result.error) {
+                const accepted = Array.isArray(result.priceOffers)
+                  ? [...result.priceOffers].reverse().find((o) => o.status === "accepted" && o.from === "admin")
+                  : null;
+                const price = accepted?.amount ?? result.negotiatedPrice ?? ownOrder.total;
+                reply = `Penawaran diterima!\n\nOrder #${orderId}\nHarga disepakati: *Rp ${price.toLocaleString("id-ID")}*\n\nAdmin akan segera memproses ke tahap berikutnya.`;
+              } else {
+                reply = result?.error
+                  ? `${result.error}`
+                  : `Tidak ada penawaran admin yang bisa diterima pada order #${orderId}.`;
+              }
+            }
+          }
+        }
+      }
+
       else if (textLower === "!produk" || textLower === "produk") {
-        reply = `Lihat katalog lengkap kami di:\nhttps://order-web-dun.vercel.app`;
+        reply = `Lihat katalog lengkap:\nhttps://order-web-dun.vercel.app`;
       }
 
-      // =========================
-      // Unknown command
-      // =========================
       else {
-        reply = `Ketik salah satu perintah berikut:
-
-• *!status* — order terakhir
-• *!histori* — riwayat order
-• *!produk* — lihat katalog
-• *!link TOKEN* — hubungkan akun via token
-• *!verify NOMORHP* — verifikasi manual`;
+        reply = `Perintah yang tersedia:\n\n- *!status*\n- *!histori*\n- *!produk*\n- *!tawar [id] [harga]*\n- *!terima [id]*\n- *!link TOKEN*\n- *!verify NOMORHP*`;
       }
 
-      // =========================
-      // Send reply
-      // =========================
-      if (reply) {
-        await sock.sendMessage(from, { text: reply });
-      }
+      if (reply) await sock.sendMessage(from, { text: reply });
     } catch (err) {
       console.log("MESSAGE ERROR:", err);
     }
   });
 }
 
-// Jalankan HTTP server & bot
 startHttpServer();
 startBot();

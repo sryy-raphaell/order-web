@@ -2,7 +2,49 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import ProductImage from "./components/ProductImage";
+import {
+  LuBot,
+  LuShoppingBag,
+  LuFlame,
+  LuCheck,
+  LuPlus,
+  LuChevronLeft,
+  LuChevronRight,
+  IconLabel,
+} from "./components/icons";
+
+function ProductThumbnail({ images, size = 72, alt = "" }) {
+  const src = Array.isArray(images) && images.length > 0 ? images[0] : null;
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        flexShrink: 0,
+        borderRadius: "var(--radius-sm)",
+        border: "1px solid var(--border)",
+        background: "var(--bg-tertiary)",
+        overflow: "hidden",
+        position: "relative",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {src ? (
+        <ProductImage
+          src={src}
+          alt={alt}
+          fill
+          placeholderIconSize={Math.round(size * 0.38)}
+        />
+      ) : (
+        <LuShoppingBag size={Math.round(size * 0.38)} color="var(--text-muted)" aria-hidden />
+      )}
+    </div>
+  );
+}
 
 function ProductCard({ product, onAddToCart }) {
   const [added, setAdded] = useState(false);
@@ -20,49 +62,55 @@ function ProductCard({ product, onAddToCart }) {
         padding: "10px 12px",
         display: "flex",
         flexDirection: "column",
-        gap: "7px",
+        gap: "8px",
       }}
     >
-      <div
-        style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}
-      >
-        <p
-          style={{
-            fontSize: "12px",
-            fontWeight: 600,
-            color: "var(--text-primary)",
-            lineHeight: 1.3,
-            flex: 1,
-          }}
-        >
-          {product.name}
-        </p>
-        <p
-          style={{
-            fontSize: "12px",
-            fontWeight: 700,
-            color: "var(--accent)",
-            flexShrink: 0,
-          }}
-        >
-          Rp {product.price?.toLocaleString("id-ID") ?? "-"}
-        </p>
+      <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+        <ProductThumbnail images={product.images} size={52} alt={product.name} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{ display: "flex", justifyContent: "space-between", gap: "8px" }}
+          >
+            <p
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--text-primary)",
+                lineHeight: 1.3,
+                flex: 1,
+              }}
+            >
+              {product.name}
+            </p>
+            <p
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "var(--accent)",
+                flexShrink: 0,
+              }}
+            >
+              Rp {product.price?.toLocaleString("id-ID") ?? "-"}
+            </p>
+          </div>
+          {product.reason && (
+            <p
+              style={{
+                fontSize: "11px",
+                color: "var(--text-muted)",
+                lineHeight: 1.5,
+                marginTop: "4px",
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {product.reason}
+            </p>
+          )}
+        </div>
       </div>
-      {product.reason && (
-        <p
-          style={{
-            fontSize: "11px",
-            color: "var(--text-muted)",
-            lineHeight: 1.5,
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }}
-        >
-          {product.reason}
-        </p>
-      )}
       <button
         onClick={handleClick}
         style={{
@@ -79,7 +127,11 @@ function ProductCard({ product, onAddToCart }) {
           textAlign: "center",
         }}
       >
-        {added ? "✓ Ditambahkan" : "+ Tambah ke Keranjang"}
+        {added ? (
+          <IconLabel icon={LuCheck} size={12}>Ditambahkan</IconLabel>
+        ) : (
+          <IconLabel icon={LuPlus} size={12}>Tambah ke Keranjang</IconLabel>
+        )}
       </button>
     </div>
   );
@@ -91,16 +143,18 @@ function ChatPanel({ onAddToCart }) {
       role: "assistant",
       type: "text",
       content:
-        "Hi! Saya SyRa 👋\nTanya produk IoT yang kamu butuhkan, saya bantu rekomendasikan.",
+        "Hi! Saya SyRa.\nTanya produk IoT yang kamu butuhkan, saya bantu rekomendasikan.",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const endRef = useRef(null);
+  const messagesRef = useRef(null);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const el = messagesRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, loading]);
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -146,10 +200,12 @@ function ChatPanel({ onAddToCart }) {
 
   return (
     <div
+      className="chat-panel-inner"
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100%",
+        flex: 1,
+        minHeight: 0,
         overflow: "hidden",
       }}
     >
@@ -176,7 +232,7 @@ function ChatPanel({ onAddToCart }) {
               fontSize: "14px",
             }}
           >
-            🤖
+            <LuBot size={16} color="var(--accent)" aria-hidden />
           </div>
           <div>
             <p
@@ -206,7 +262,7 @@ function ChatPanel({ onAddToCart }) {
                 }}
               />
               <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
-                Asisten IoT
+                Asisten Store
               </span>
             </div>
           </div>
@@ -215,9 +271,13 @@ function ChatPanel({ onAddToCart }) {
 
       {/* Messages */}
       <div
+        ref={messagesRef}
+        className="chat-messages"
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: "auto",
+          overflowX: "hidden",
           padding: "12px",
           display: "flex",
           flexDirection: "column",
@@ -301,7 +361,6 @@ function ChatPanel({ onAddToCart }) {
             </div>
           </div>
         )}
-        <div ref={endRef} />
       </div>
 
       {/* Input */}
@@ -381,11 +440,20 @@ export default function CatalogPage() {
   const [mobileTab, setMobileTab] = useState("catalog"); // "catalog" | "chat"
   const router = useRouter();
 
-  const [cart, setCart] = useState(() => {
-    if (typeof window === "undefined") return [];
-    const saved = localStorage.getItem("cart");
-    return saved ? JSON.parse(saved) : [];
+const [cart, setCart] = useState([]);
+const [cartReady, setCartReady] = useState(false);
+
+useEffect(() => {
+  const saved = localStorage.getItem("cart");
+  const initial = saved ? JSON.parse(saved) : [];
+  // setState via startTransition agar tidak dianggap synchronous cascade
+  import("react").then(({ startTransition }) => {
+    startTransition(() => {
+      setCart(initial);
+      setCartReady(true);
+    });
   });
+}, []);
 
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(cart));
@@ -425,12 +493,19 @@ export default function CatalogPage() {
   const CHAT_W = chatCollapsed ? 52 : 300;
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-primary)" }}>
+    <div className="catalog-page" style={{ background: "var(--bg-primary)" }}>
       <style>{`
         /* ── desktop layout ── */
+        .catalog-page {
+          height: calc(100vh - 52px);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
         .main-shell {
           display: flex;
-          height: calc(100vh - 52px);
+          flex: 1;
+          min-height: 0;
           overflow: hidden;
         }
         /* chat panel */
@@ -441,14 +516,29 @@ export default function CatalogPage() {
           background: var(--bg-secondary);
           display: flex;
           flex-direction: column;
+          flex-shrink: 0;
+          min-height: 0;
+          height: 100%;
           transition: width 0.25s ease, min-width 0.25s ease;
           position: relative;
           overflow: hidden;
         }
+        .chat-panel-inner {
+          flex: 1;
+          min-height: 0;
+        }
+        .chat-messages {
+          overscroll-behavior: contain;
+        }
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
         /* catalog + cart panel */
         .right-panel {
           flex: 1;
+          min-width: 0;
+          min-height: 0;
           overflow-y: auto;
+          overflow-x: hidden;
           display: flex;
           flex-direction: column;
         }
@@ -457,11 +547,12 @@ export default function CatalogPage() {
 
         /* ── mobile ── */
         @media (max-width: 767px) {
-          .main-shell { flex-direction: column; height: auto; overflow: visible; }
+          .catalog-page { height: auto; overflow: visible; }
+          .main-shell { flex-direction: column; flex: none; min-height: auto; overflow: visible; }
           .chat-panel { width: 100% !important; min-width: 100% !important; border-right: none;
             border-bottom: 1px solid var(--border);
-            height: 480px; display: ${mobileTab === "chat" ? "flex" : "none"} !important; }
-          .right-panel { display: ${mobileTab === "catalog" ? "flex" : "none"} !important; overflow-y: visible; }
+            height: 480px; flex-shrink: 0; display: ${mobileTab === "chat" ? "flex" : "none"} !important; }
+          .right-panel { display: ${mobileTab === "catalog" ? "flex" : "none"} !important; overflow-y: visible; flex: none; }
           .mobile-tabs { display: flex !important; }
           .collapse-btn { display: none !important; }
         }
@@ -522,9 +613,13 @@ export default function CatalogPage() {
               transition: "all 0.15s",
             }}
           >
-            {tab === "catalog"
-              ? `🛍 Katalog${totalItems > 0 ? ` (${totalItems})` : ""}`
-              : "🤖 SyRa Chat"}
+            {tab === "catalog" ? (
+              <IconLabel icon={LuShoppingBag} size={14}>
+                Katalog{cartReady && totalItems > 0 ? ` (${totalItems})` : ""}
+              </IconLabel>
+            ) : (
+              <IconLabel icon={LuBot} size={14}>SyRa Chat</IconLabel>
+            )}
           </button>
         ))}
       </div>
@@ -566,7 +661,7 @@ export default function CatalogPage() {
               e.currentTarget.style.color = "var(--text-muted)";
             }}
           >
-            {chatCollapsed ? "›" : "‹"}
+            {chatCollapsed ? <LuChevronRight size={14} /> : <LuChevronLeft size={14} />}
           </button>
 
           {/* Collapsed state — just icon */}
@@ -584,7 +679,7 @@ export default function CatalogPage() {
                 padding: "0 8px",
               }}
             >
-              <span style={{ fontSize: "18px" }}>🤖</span>
+              <LuBot size={20} color="var(--accent)" aria-hidden />
               <span
                 style={{
                   fontSize: "10px",
@@ -767,7 +862,7 @@ export default function CatalogPage() {
                     marginBottom: "12px",
                   }}
                 >
-                  <span style={{ fontSize: "13px" }}>🔥</span>
+                  <LuFlame size={14} color="#f97316" aria-hidden />
                   <p
                     style={{
                       fontSize: "12px",
@@ -918,12 +1013,13 @@ export default function CatalogPage() {
                         background: "var(--bg-secondary)",
                         border: "1px solid var(--border)",
                         borderRadius: "var(--radius-lg)",
-                        padding: "14px",
+                        padding: "12px",
                         display: "flex",
                         flexDirection: "column",
-                        gap: "9px",
+                        gap: "10px",
                         transition: "border-color 0.15s",
                         cursor: "default",
+                        height: "100%",
                       }}
                       onMouseEnter={(e) =>
                         (e.currentTarget.style.borderColor =
@@ -933,53 +1029,64 @@ export default function CatalogPage() {
                         (e.currentTarget.style.borderColor = "var(--border)")
                       }
                     >
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: 500,
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          background:
-                            item.type === "product"
-                              ? "var(--blue-subtle)"
-                              : "var(--accent-subtle)",
-                          color:
-                            item.type === "product"
-                              ? "var(--blue)"
-                              : "var(--accent)",
-                          border: `1px solid ${item.type === "product" ? "rgba(59,130,246,0.2)" : "rgba(34,197,94,0.2)"}`,
-                          width: "fit-content",
-                        }}
-                      >
-                        {item.type === "product" ? "Produk" : "Layanan"}
-                      </span>
-                      <div>
-                        <p
-                          style={{
-                            fontWeight: 500,
-                            fontSize: "13px",
-                            color: "var(--text-primary)",
-                            marginBottom: "3px",
-                          }}
-                        >
-                          {item.name}
-                        </p>
-                        <p
-                          style={{
-                            fontSize: "12px",
-                            color: "var(--text-secondary)",
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          {item.description}
-                        </p>
+                      <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                        <ProductThumbnail images={item.images} size={80} alt={item.name} />
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+                            <p
+                              style={{
+                                fontWeight: 500,
+                                fontSize: "13px",
+                                color: "var(--text-primary)",
+                                lineHeight: 1.35,
+                                flex: 1,
+                              }}
+                            >
+                              {item.name}
+                            </p>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: 500,
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                background:
+                                  item.type === "product"
+                                    ? "var(--blue-subtle)"
+                                    : "var(--accent-subtle)",
+                                color:
+                                  item.type === "product"
+                                    ? "var(--blue)"
+                                    : "var(--accent)",
+                                border: `1px solid ${item.type === "product" ? "rgba(59,130,246,0.2)" : "rgba(34,197,94,0.2)"}`,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {item.type === "product" ? "Produk" : "Layanan"}
+                            </span>
+                          </div>
+                          <p
+                            style={{
+                              fontSize: "12px",
+                              color: "var(--text-secondary)",
+                              lineHeight: 1.5,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {item.description}
+                          </p>
+                        </div>
                       </div>
                       <div
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
                           alignItems: "center",
-                          marginTop: "2px",
+                          paddingTop: "2px",
+                          borderTop: "1px solid var(--border)",
                         }}
                       >
                         <span

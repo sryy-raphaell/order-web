@@ -7,16 +7,18 @@ export default function Chatbot({ onAddToCart }) {
       role: "assistant",
       type: "text",
       content:
-        "Hi! Saya SyRa, asisten IoT kamu. Ada yang bisa saya bantu? Misalnya, tanyakan produk yang sesuai untuk proyek IoT kamu! 🤖",
+        "Hi! Saya SyRa, asisten Store. Ada yang bisa saya bantu? Misalnya, tanyakan produk yang sesuai untuk proyek IoT kamu! ",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef(null);
+  const messagesRef = useRef(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const el = messagesRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [messages, loading]);
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -120,15 +122,19 @@ export default function Chatbot({ onAddToCart }) {
           SyRa
         </p>
         <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          Asisten IoT
+          Asisten Store
         </span>
       </div>
 
       {/* Messages */}
       <div
+        ref={messagesRef}
         style={{
           flex: 1,
+          minHeight: 0,
           overflowY: "auto",
+          overflowX: "hidden",
+          overscrollBehavior: "contain",
           padding: "12px",
           display: "flex",
           flexDirection: "column",
@@ -227,7 +233,6 @@ export default function Chatbot({ onAddToCart }) {
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
@@ -243,7 +248,7 @@ export default function Chatbot({ onAddToCart }) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Tanya kebutuhan IoT kamu..."
+          placeholder="Tanya kebutuhan kamu..."
           disabled={loading}
           style={{
             flex: 1,

@@ -90,7 +90,7 @@ Jawab: {"type":"add_to_cart","message":"Oke! Klik tombol di bawah untuk tambahka
           .filter(p => validIds.includes(p.id))
           .map(p => {
             const db = products.find(db => db.id === p.id)
-            return { ...p, price: db.price, name: db.name }
+            return { ...p, price: db.price, name: db.name, images: db.images }
           })
       }
 

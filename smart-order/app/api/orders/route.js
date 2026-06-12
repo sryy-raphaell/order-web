@@ -4,6 +4,11 @@ function generateToken() {
   return "SRY-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+console.log(
+  "DATABASE URL =",
+  process.env.DATABASE_URL?.substring(0, 50)
+);
+
 // Kirim pesan ke user via wa-bot HTTP API (port 3002)
 async function notifyUser(phone, message) {
   try {
@@ -85,6 +90,22 @@ export async function GET(request) {
 
   let user = null;
 
+  if (lid) {
+  console.log("SEARCH LID =", lid);
+
+  user = await prisma.user.findUnique({
+    where: { lid },
+    include: {
+      orders: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      },
+    },
+  });
+
+  console.log("RESULT =", user);
+}
+
   // Cari berdasarkan LID dulu
   if (lid) {
     user = await prisma.user.findUnique({
@@ -99,6 +120,8 @@ export async function GET(request) {
     console.log("GET orders by lid:", lid, "→", user ? "found" : "not found");
   }
 
+
+  
   // Fallback ke phone
   if (!user && phone) {
     const cleanPhone = phone.replace(/\D/g, "").replace(/^0/, "62");

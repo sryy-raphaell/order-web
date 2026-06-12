@@ -1,19 +1,43 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import {
+  LuCheck,
+  LuKey,
+  LuSmartphone,
+  LuTriangleAlert,
+  LuMessageCircle,
+  IconLabel,
+} from "../components/icons";
+
 
 export default function CheckoutPage() {
   const [form, setForm] = useState({ name: "", address: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
   const [orderResult, setOrderResult] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const router = useRouter();
 
-  const [cart] = useState(() => {
-    if (typeof window === "undefined") return [];
+const [cart, setCart] = useState([]);
+const [isLoaded, setIsLoaded] = useState(false);
+
+useEffect(() => {
+  try {
     const saved = localStorage.getItem("cart");
-    return saved ? JSON.parse(saved) : [];
-  });
+    setCart(saved ? JSON.parse(saved) : []);
+  } catch {
+    setCart([]);
+  }
+
+  setIsLoaded(true);
+}, []);
+
+if (!isLoaded) {
+  return null;
+}
+
+  const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
 
   async function handleSubmit() {
     if (!form.name || !form.address || !form.phone) {
@@ -32,7 +56,7 @@ export default function CheckoutPage() {
           name: form.name,
           phone: cleanPhone,
           items: cart,
-          total: cart.reduce((sum, c) => sum + c.price * c.qty, 0),
+          total,
         }),
       });
 
@@ -41,14 +65,12 @@ export default function CheckoutPage() {
       setSubmitted(true);
       localStorage.removeItem("cart");
 
-      // Buka WA Web dengan detail order
-      const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
       const message = [
         "Halo, saya ingin memesan:",
         "",
         ...cart.map(
           (item) =>
-            `- ${item.name} x${item.qty} = Rp ${(item.price * item.qty).toLocaleString("id-ID")}`
+            `- ${item.name} x${item.qty} = Rp ${(item.price * item.qty).toLocaleString("id-ID")}`,
         ),
         "",
         `Total: Rp ${total.toLocaleString("id-ID")}`,
@@ -66,8 +88,6 @@ export default function CheckoutPage() {
       setLoading(false);
     }
   }
-
-  const total = cart.reduce((sum, c) => sum + c.price * c.qty, 0);
 
   // ── Halaman konfirmasi setelah order berhasil ──
   if (submitted && orderResult) {
@@ -92,7 +112,6 @@ export default function CheckoutPage() {
             width: "100%",
           }}
         >
-          {/* Icon sukses */}
           <div
             style={{
               width: "48px",
@@ -107,7 +126,7 @@ export default function CheckoutPage() {
               marginBottom: "16px",
             }}
           >
-            ✅
+            <LuCheck size={24} color="var(--accent)" aria-hidden />
           </div>
 
           <h2
@@ -158,7 +177,7 @@ export default function CheckoutPage() {
                 letterSpacing: "0.5px",
               }}
             >
-              🔑 TOKEN AKUN KAMU
+              <IconLabel icon={LuKey} size={12} gap={5}>TOKEN AKUN KAMU</IconLabel>
             </p>
             <p
               style={{
@@ -217,8 +236,12 @@ export default function CheckoutPage() {
               marginBottom: "20px",
             }}
           >
-            <span style={{ fontSize: "14px", flexShrink: 0 }}>
-              {orderResult.waSent ? "📱" : "⚠️"}
+            <span style={{ flexShrink: 0, display: "flex", alignItems: "center" }}>
+              {orderResult.waSent ? (
+                <LuSmartphone size={16} color="var(--accent)" aria-hidden />
+              ) : (
+                <LuTriangleAlert size={16} color="#fbbf24" aria-hidden />
+              )}
             </span>
             <p
               style={{
@@ -370,7 +393,9 @@ export default function CheckoutPage() {
               Data Pemesan
             </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "14px" }}
+            >
               <div>
                 <label
                   style={{
@@ -415,7 +440,9 @@ export default function CheckoutPage() {
                     lineHeight: 1.5,
                   }}
                 >
-                  ⚠ Token akan dikirim ke nomor ini. Pastikan aktif di WhatsApp.
+                  <IconLabel icon={LuTriangleAlert} size={12} gap={5} style={{ color: "inherit" }}>
+                    Token akan dikirim ke nomor ini. Pastikan aktif di WhatsApp.
+                  </IconLabel>
                 </p>
               </div>
 
@@ -534,7 +561,12 @@ export default function CheckoutPage() {
                         >
                           {item.name}
                         </p>
-                        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        <p
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--text-muted)",
+                          }}
+                        >
                           x{item.qty}
                         </p>
                       </div>
@@ -588,7 +620,9 @@ export default function CheckoutPage() {
                   disabled={loading}
                   style={{
                     width: "100%",
-                    background: loading ? "var(--bg-tertiary)" : "var(--accent-subtle)",
+                    background: loading
+                      ? "var(--bg-tertiary)"
+                      : "var(--accent-subtle)",
                     color: loading ? "var(--text-muted)" : "var(--accent)",
                     border: "1px solid rgba(74,222,128,0.25)",
                     borderRadius: "var(--radius-sm)",
@@ -615,7 +649,7 @@ export default function CheckoutPage() {
                     }
                   }}
                 >
-                  <span>💬</span>
+                  <LuMessageCircle size={15} aria-hidden />
                   {loading ? "Memproses..." : "Kirim ke WhatsApp"}
                 </button>
               </>

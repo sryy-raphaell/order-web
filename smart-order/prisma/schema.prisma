@@ -24,16 +24,6 @@ model Item {
   createdAt       DateTime @default(now())
 }
 
-model IotData {
-  id          Int      @id @default(autoincrement())
-  deviceName  String   @unique
-  status      String
-  temperature Float
-  humidity    Float
-  relay       Boolean  @default(false)
-  updatedAt   DateTime @updatedAt
-}
-
 model User {
   id        Int      @id @default(autoincrement())
   phone     String   @unique
@@ -45,12 +35,45 @@ model User {
 }
 
 model Order {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  items     Json
-  total     Int
-  status    String   @default("pending")
-  note      String?
-  createdAt DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
+  items           Json
+  total           Int
+  negotiatedPrice Int?
+  priceOffers     Json     @default("[]")
+  status          String   @default("pending")
+  note            String?
+  createdAt       DateTime @default(now())
+}
+
+// ─── IoT ─────────────────────────────────────────────────────────────────────
+
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  authToken   String    @unique @default(cuid())
+  // widgets: [{ id, type, title, x, y, w, h, config }]
+  // type: "value"|"chart"|"gauge"|"button"|"label"
+  // config: { pin, deviceName, unit, min, max, color, onLabel, offLabel }
+  widgets     Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  devices     IotData[]
+}
+
+model IotData {
+  id          Int      @id @default(autoincrement())
+  deviceName  String   @unique
+  projectId   Int?
+  project     Project? @relation(fields: [projectId], references: [id])
+  status      String   @default("offline")
+  temperature Float    @default(0)
+  humidity    Float    @default(0)
+  // Virtual pins: { "V0": 23.5, "V1": "ON", ... }
+  pins        Json     @default("{}")
+  // Multi-channel relay: { "0": false, "1": false, "2": false, "3": false }
+  relays      Json     @default("{}")
+  relay       Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
 }

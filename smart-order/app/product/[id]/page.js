@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import Image from "next/image";
+import ProductImage from "../../components/ProductImage";
 
 export default function ProductDetailPage() {
   const [item, setItem] = useState(null);
@@ -121,11 +121,11 @@ export default function ProductDetailPage() {
                   position: "relative",
                 }}
               >
-                <Image
+                <ProductImage
                   src={images[selectedImage]}
                   alt={item.name}
-                  layout="fill"
-                  style={{ objectFit: "cover" }}
+                  fill
+                  placeholderIconSize={32}
                 />
               </div>
 
@@ -148,12 +148,7 @@ export default function ProductDetailPage() {
                         position: "relative",
                       }}
                     >
-                      <Image
-                        src={img}
-                        alt=""
-                        layout="fill"
-                        style={{ objectFit: "cover" }}
-                      />
+                      <ProductImage src={img} alt="" fill placeholderIconSize={18} />
                     </div>
                   ))}
                 </div>
