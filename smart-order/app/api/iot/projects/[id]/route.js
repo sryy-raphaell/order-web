@@ -1,5 +1,7 @@
 import { prisma } from "../../../../../lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/iot/projects/[id]
 export async function GET(request, { params }) {
   const { id } = await params;
@@ -32,7 +34,6 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   const { id } = await params;
   const pid = parseInt(id);
-  // Unlink devices dulu
   await prisma.iotData.updateMany({
     where: { projectId: pid },
     data: { projectId: null },

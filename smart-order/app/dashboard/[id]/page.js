@@ -434,7 +434,7 @@ export default function ProjectDashboardPage({ params }) {
 
   // Load project
   useEffect(() => {
-    fetch(`/api/iot/projects/${id}`)
+    fetch(`/api/iot/projects/${id}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((p) => {
         setProject(p);
@@ -447,7 +447,7 @@ export default function ProjectDashboardPage({ params }) {
   // Poll devices setiap 3 detik
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch(`/api/iot/projects/${id}`)
+      fetch(`/api/iot/projects/${id}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((p) => {
           const devs = p.devices ?? [];
@@ -624,21 +624,42 @@ export default function ProjectDashboardPage({ params }) {
       {/* Add widget menu */}
       {addMenu && (
         <div style={{ padding: "12px 24px", background: "var(--bg-secondary)", borderBottom: "1px solid var(--border)", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {WIDGET_TYPES.map((t) => {
-            const Icon = WIDGET_ICONS[t.type];
-            return (
-            <button key={t.type} onClick={() => addWidget(t.type)}
-              style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)", color: "var(--text-primary)", borderRadius: "var(--radius-md)", padding: "10px 16px", fontSize: "12px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", minWidth: "80px", transition: "border-color 0.15s" }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--accent)"}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border)"}
-            >
-              {Icon && <Icon size={22} color="var(--accent)" aria-hidden />}
-              <span>{t.label}</span>
-            </button>
-            );
-          })}
+{WIDGET_TYPES.map((t) => {
+  const Icon = WIDGET_ICONS[t.type];
+
+  return (
+    <button
+      key={t.type}
+      onClick={() => addWidget(t.type)}
+      style={{
+        background: "var(--bg-tertiary)",
+        border: "1px solid var(--border)",
+        color: "var(--text-primary)",
+        borderRadius: "var(--radius-md)",
+        padding: "10px 16px",
+        fontSize: "12px",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "4px",
+        minWidth: "80px",
+        transition: "border-color 0.15s",
+      }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.borderColor = "var(--accent)")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.borderColor = "var(--border)")
+      }
+    >
+      {Icon && <Icon size={22} color="var(--accent)" aria-hidden />}
+      <span>{t.label}</span>
+    </button>
+  );
+})}
         </div>
-      )}
+      )};
 
       {/* Canvas */}
       <div style={{ padding: "16px 24px", overflowX: "auto" }}>
