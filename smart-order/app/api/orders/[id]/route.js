@@ -17,35 +17,27 @@ async function notifyUser(phone, message) {
 
 // Alur status valid berdasarkan tipe order
 function getValidTransitions(orderItems, currentStatus) {
-  // Cek apakah ada item tipe layanan
   const hasService = Array.isArray(orderItems)
     ? orderItems.some((i) => i.type === "service")
     : false;
 
-  if (hasService) {
-    // Layanan: pending → negosiasi → pembayaran → pembuatan → pengiriman → selesai
-    const flow = ["pending", "negosiasi", "pembayaran", "pembuatan", "pengiriman", "selesai", "dibatalkan"];
-    const idx = flow.indexOf(currentStatus);
-    if (idx === -1) return ["dibatalkan"];
-    // Bisa maju ke next, atau dibatalkan dari mana saja (kecuali sudah selesai)
-    const next = flow[idx + 1];
-    const transitions = next ? [next] : [];
-    if (currentStatus !== "selesai" && currentStatus !== "dibatalkan") {
-      transitions.push("dibatalkan");
-    }
-    return transitions;
-  } else {
-    // Produk: pending → pembayaran → pengiriman → selesai
-    const flow = ["pending", "pembayaran", "pengiriman", "selesai", "dibatalkan"];
-    const idx = flow.indexOf(currentStatus);
-    if (idx === -1) return ["dibatalkan"];
-    const next = flow[idx + 1];
-    const transitions = next ? [next] : [];
-    if (currentStatus !== "selesai" && currentStatus !== "dibatalkan") {
-      transitions.push("dibatalkan");
-    }
-    return transitions;
+  // negosiasi selalu bisa lanjut ke pembayaran, apapun tipe order
+  if (currentStatus === "negosiasi") {
+    return ["pembayaran", "dibatalkan"];
   }
+
+  const flow = hasService
+    ? ["pending", "negosiasi", "pembayaran", "pembuatan", "pengiriman", "selesai", "dibatalkan"]
+    : ["pending", "pembayaran", "pengiriman", "selesai", "dibatalkan"];
+
+  const idx = flow.indexOf(currentStatus);
+  if (idx === -1) return ["dibatalkan"];
+  const next = flow[idx + 1];
+  const transitions = next ? [next] : [];
+  if (currentStatus !== "selesai" && currentStatus !== "dibatalkan") {
+    transitions.push("dibatalkan");
+  }
+  return transitions;
 }
 
 // Pesan notif WA per status
