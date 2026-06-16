@@ -8,7 +8,7 @@ const {
 const qrcode = require("qrcode-terminal");
 const http = require("http");
 
-const API_URL = "http://localhost:3000";
+const API_URL = "http://localhost:3000"; // atau ganti dengan url website online jika sudah deploy
 const BOT_PORT = 3002;
   
 let sockGlobal = null;
