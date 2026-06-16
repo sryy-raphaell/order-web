@@ -1,21 +1,57 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect, useSyncExternalStore } from 'react'
+import { LuSun, LuMoon } from 'react-icons/lu'
+
+// ── useSyncExternalStore untuk baca localStorage tanpa setState di effect ──
+function subscribe(cb) {
+  window.addEventListener('storage', cb)
+  return () => window.removeEventListener('storage', cb)
+}
+function getThemeSnapshot() {
+  return localStorage.getItem('syra-theme') || 'dark'
+}
+function getThemeServerSnapshot() {
+  return 'dark' // selalu dark di server (SSR)
+}
 
 export default function Navbar() {
   const pathname = usePathname()
 
+  // useSyncExternalStore: aman dari hydration mismatch, tanpa setState di effect
+  const theme = useSyncExternalStore(
+    subscribe,
+    getThemeSnapshot,
+    getThemeServerSnapshot,
+  )
+
+  // Sync atribut ke <html> setiap kali theme berubah — ini murni side-effect ke DOM
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    localStorage.setItem('syra-theme', next)
+    // Dispatch storage event agar useSyncExternalStore re-subscribe
+    window.dispatchEvent(new StorageEvent('storage', { key: 'syra-theme', newValue: next }))
+  }
+
+  const isLight = theme === 'light'
+
   const links = [
-    { href: '/', label: 'Katalog' },
+    { href: '/',          label: 'Katalog'   },
     { href: '/dashboard', label: 'Dashboard' },
-    { href: '/admin', label: 'Admin' },
+    // { href: '/admin',     label: 'Admin'     },
   ]
 
   return (
     <nav style={{
-      background: 'rgba(10,10,10,0.8)',
+      background: 'var(--navbar-bg)',
       backdropFilter: 'blur(12px)',
-      borderBottom: '1px solid var(--border)',
+      WebkitBackdropFilter: 'blur(12px)',
+      borderBottom: '1px solid var(--navbar-border)',
       padding: '0 24px',
       height: '52px',
       display: 'flex',
@@ -24,21 +60,38 @@ export default function Navbar() {
       position: 'sticky',
       top: 0,
       zIndex: 50,
+      transition: 'background 0.3s ease, border-color 0.3s ease',
     }}>
+
+      {/* ── Logo ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{
-          width: '20px', height: '20px',
-          background: 'var(--accent)',
-          borderRadius: '4px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '10px', fontWeight: 700, color: '#000'
+          width: '24px',
+          height: '24px',
+          background: 'var(--logo-bg)',
+          borderRadius: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '10px',
+          fontWeight: 700,
+          color: 'var(--logo-color)',
+          flexShrink: 0,
+          transition: 'background 0.3s ease',
         }}>SR</div>
-        <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
+        <span style={{
+          fontWeight: 600,
+          fontSize: '14px',
+          color: 'var(--text-primary)',
+          transition: 'color 0.3s ease',
+        }}>
           SyRa Store
         </span>
       </div>
 
-      <div style={{ display: 'flex', gap: '2px' }}>
+      {/* ── Nav Links + Toggle ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+
         {links.map(link => (
           <Link key={link.href} href={link.href} style={{
             padding: '6px 14px',
@@ -54,6 +107,72 @@ export default function Navbar() {
             {link.label}
           </Link>
         ))}
+
+        {/* ── Theme Toggle Button ── */}
+        <button
+          onClick={toggleTheme}
+          title={isLight ? 'Ganti ke Dark Mode' : 'Ganti ke Light Mode'}
+          style={{
+            marginLeft: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            border: '1px solid',
+            transition: 'all 0.25s ease',
+            background: isLight
+              ? 'rgba(74, 222, 128, 0.1)'
+              : 'rgba(37, 99, 235, 0.12)',
+            borderColor: isLight
+              ? 'rgba(74, 222, 128, 0.4)'
+              : 'rgba(96, 165, 250, 0.4)',
+            color: isLight ? '#22c55e' : '#93c5fd',
+          }}
+        >
+          {/* Pill track */}
+          <span style={{
+            position: 'relative',
+            display: 'inline-flex',
+            alignItems: 'center',
+            width: '36px',
+            height: '20px',
+            borderRadius: '10px',
+            background: isLight
+              ? 'linear-gradient(135deg, #4ade80, #22c55e)'
+              : 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
+            transition: 'background 0.3s ease',
+            flexShrink: 0,
+          }}>
+            {/* Thumb */}
+            <span style={{
+              position: 'absolute',
+              width: '14px',
+              height: '14px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+              transition: 'transform 0.25s ease',
+              transform: isLight ? 'translateX(19px)' : 'translateX(3px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              {isLight
+                ? <LuSun  size={9} color="#d97706" aria-hidden />
+                : <LuMoon size={9} color="#3b82f6" aria-hidden />
+              }
+            </span>
+          </span>
+
+          <span style={{ whiteSpace: 'nowrap' }}>
+            {isLight ? 'Light' : 'Dark'}
+          </span>
+        </button>
+
       </div>
     </nav>
   )

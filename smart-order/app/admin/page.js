@@ -36,6 +36,7 @@ const STATUS_FLOW_SERVICE = [
 ];
 const STATUS_FLOW_PRODUCT = [
   "pending",
+  "negosiasi",
   "pembayaran",
   "pengiriman",
   "selesai",
@@ -69,8 +70,16 @@ function StatusBadge({ status }) {
 function getNextStatuses(items, currentStatus) {
   const hasService = Array.isArray(items) && items.some((i) => i.type === "service");
   const flow = hasService ? STATUS_FLOW_SERVICE : STATUS_FLOW_PRODUCT;
-  const idx = flow.indexOf(currentStatus);
   const result = [];
+  
+  // Kalau negosiasi (bisa terjadi di order product juga), next adalah pembayaran
+  if (currentStatus === "negosiasi") {
+    result.push("pembayaran");
+    result.push("dibatalkan");
+    return result;
+  }
+  
+  const idx = flow.indexOf(currentStatus);
   if (idx !== -1 && idx < flow.length - 1) result.push(flow[idx + 1]);
   if (currentStatus !== "selesai" && currentStatus !== "dibatalkan") result.push("dibatalkan");
   return result;

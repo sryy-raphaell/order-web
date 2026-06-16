@@ -25,6 +25,8 @@ import {
   LuChevronLeft,
   LuChevronRight,
   LuSearch,
+  LuSun,
+  LuMoon,
 } from "react-icons/lu";
 
 export {
@@ -52,6 +54,8 @@ export {
   LuChevronLeft,
   LuChevronRight,
   LuSearch,
+  LuSun,
+  LuMoon,
 };
 
 export const WIDGET_ICONS = {

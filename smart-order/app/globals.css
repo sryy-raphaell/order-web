@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* ─── DARK MODE (default) ─────────────────────────────────── */
 :root {
   --bg-primary:    #0f0f10;
   --bg-secondary:  #161618;
@@ -26,15 +27,57 @@
   --radius-sm:     6px;
   --radius-md:     10px;
   --radius-lg:     12px;
+
+  --navbar-bg:     rgba(10, 10, 10, 0.85);
+  --navbar-border: #2e2e32;
+  --logo-bg:       #4ade80;
+  --logo-color:    #000000;
+
+  color-scheme: dark;
 }
 
+/* ─── LIGHT MODE ──────────────────────────────────────────── */
+:root[data-theme="light"] {
+  --bg-primary:    #e8f1ff;
+  --bg-secondary:  #f2f7ff;
+  --bg-tertiary:   #e8f0fe;
+  --bg-hover:      #dbeafe;
+
+  --border:        #bfdbfe;
+  --border-light:  #93c5fd;
+
+  --text-primary:  #1e3a5f;
+  --text-secondary:#3b6fa0;
+  --text-muted:    #7aa3c8;
+
+  --accent:        #2563eb;
+  --accent-dim:    #1d4ed8;
+  --accent-glow:   rgba(37, 99, 235, 0.12);
+  --accent-subtle: rgba(37, 99, 235, 0.08);
+
+  --red:           #ef4444;
+  --red-subtle:    rgba(239, 68, 68, 0.08);
+  --blue:          #2563eb;
+  --blue-subtle:   rgba(37, 99, 235, 0.08);
+
+  --navbar-bg:     rgba(255, 255, 255, 0.92);
+  --navbar-border: #bfdbfe;
+  --logo-bg:       #2563eb;
+  --logo-color:    #ffffff;
+
+  color-scheme: light;
+}
+
+/* ─── BASE ────────────────────────────────────────────────── */
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* ─── SCROLLBAR ───────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 3px; }
